@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Oswald Variable";
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url("../node_modules/@fontsource-variable/oswald/files/oswald-latin-wght-normal.woff2")
+    format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2")
+    format("woff2");
+}
+
+@theme {
+  --color-ink: #101820;
+  --color-card: #1c2630;
+  --color-rush: #84ff4a;
+  --color-break: #ffb347;
+  --color-prepare: #38bdf8;
+  --color-muted: #a5adb6;
+  --font-display: "Oswald Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #101820;
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  background: #101820;
+  color: #ffffff;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+::selection {
+  background: #84ff4a;
+  color: #101820;
+}
+
+input[type="range"] {
+  accent-color: #84ff4a;
+  width: 100%;
+}
+
+.timer-digits {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(4.75rem, min(24vh, 32vw), 16rem);
+  line-height: 0.88;
+  letter-spacing: -0.045em;
+}
+
+.phase-label {
+  font-size: clamp(2.5rem, min(8vh, 12vw), 5.75rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 0.9;
+}
+
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+.countdown-pulse {
+  animation: pulse-soft 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-pulse {
+    animation: none;
+  }
+
+  .active\:scale-\[0\.98\]:active {
+    transform: none;
+  }
+}
