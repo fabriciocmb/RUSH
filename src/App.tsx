@@ -73,7 +73,7 @@ export default function App() {
 
   const timer = useWorkoutTimer(handleEvents);
   const view = getPhaseView(timer.snapshot);
-  const gainWakeLock = useWakeLock(screen === 'timer' || screen === 'complete');
+  const wakeLock = useWakeLock(screen === 'timer' || screen === 'complete');
 
   useEffect(() => {
     audio.setVolume(data.preferences.volume);
@@ -91,6 +91,13 @@ export default function App() {
     }
   }, [screen, view, displayedSecond]);
 
+  useEffect(() => {
+    if (screen !== 'timer' && screen !== 'complete') return;
+    const arm = () => wakeLock.enable();
+    window.addEventListener('pointerdown', arm, true);
+    return () => window.removeEventListener('pointerdown', arm, true);
+  }, [screen, wakeLock.enable]);
+
   const openEditor = (draft: Workout, saved: boolean) => {
     const signature = workoutSignature(draft);
     setEditor({
@@ -104,9 +111,10 @@ export default function App() {
   const begin = async (workout: Workout, back: 'home' | 'editor') => {
     if (startingRef.current) return;
     startingRef.current = true;
+    let entered = screen === 'timer' || screen === 'complete';
     try {
+      wakeLock.enable();
       audio.prime();
-      gainWakeLock(true);
       try {
         await audio.unlock();
       } catch {
@@ -120,8 +128,10 @@ export default function App() {
       }
       setReturnTo(back);
       setScreen('timer');
+      entered = true;
     } finally {
       startingRef.current = false;
+      if (!entered) wakeLock.releaseIfIdle();
     }
   };
 

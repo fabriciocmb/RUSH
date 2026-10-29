@@ -63,8 +63,15 @@ export class SoundEngine {
     try {
       const context = new AudioCtx();
       const master = context.createGain();
+      const compressor = context.createDynamicsCompressor();
+      compressor.threshold.value = -14;
+      compressor.knee.value = 4;
+      compressor.ratio.value = 8;
+      compressor.attack.value = 0.002;
+      compressor.release.value = 0.08;
       master.gain.value = this.muted ? 0 : this.volume;
-      master.connect(context.destination);
+      master.connect(compressor);
+      compressor.connect(context.destination);
       this.context = context;
       this.master = master;
       return context;
@@ -122,7 +129,8 @@ export class SoundEngine {
     source.start();
   }
 
-  private tone(
+  /** Instant attack, short decay. Square and saw cut through a noisy room. */
+  private pierce(
     frequency: number,
     when: number,
     duration: number,
@@ -134,39 +142,71 @@ export class SoundEngine {
     const gain = this.context.createGain();
     oscillator.type = type;
     oscillator.frequency.setValueAtTime(frequency, when);
+    const level = Math.max(0.0001, peak);
     gain.gain.setValueAtTime(0.0001, when);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), when + 0.008);
+    gain.gain.exponentialRampToValueAtTime(level, when + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
     oscillator.connect(gain);
     gain.connect(this.master);
     oscillator.start(when);
     oscillator.stop(when + duration + 0.02);
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gain.disconnect();
+    };
   }
 
-  private bell(frequency: number, when: number, duration: number, peak: number): void {
-    this.tone(frequency, when, duration, peak, 'sine');
-    this.tone(frequency * 2, when, duration * 0.55, peak * 0.22, 'sine');
-    this.tone(frequency * 2.76, when, duration * 0.3, peak * 0.07, 'triangle');
+  private tick(when: number, duration: number, peak: number): void {
+    if (!this.context || !this.master) return;
+    const length = Math.max(1, Math.floor(this.context.sampleRate * duration));
+    const buffer = this.context.createBuffer(1, length, this.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let index = 0; index < length; index += 1) {
+      const envelope = 1 - index / length;
+      data[index] = (Math.random() * 2 - 1) * envelope * envelope;
+    }
+    const source = this.context.createBufferSource();
+    const filter = this.context.createBiquadFilter();
+    const gain = this.context.createGain();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(2200, when);
+    gain.gain.setValueAtTime(Math.max(0.0001, peak), when);
+    source.buffer = buffer;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.master);
+    source.start(when);
+    source.onended = () => {
+      source.disconnect();
+      filter.disconnect();
+      gain.disconnect();
+    };
   }
 
   private scheduleBeep(when: number): void {
-    this.tone(1480, when, 0.07, 0.2, 'sine');
-    this.tone(1480, when, 0.02, 0.04, 'square');
+    this.pierce(2480, when, 0.05, 0.82, 'square');
+    this.pierce(3720, when, 0.028, 0.34, 'square');
+    this.tick(when, 0.012, 0.45);
   }
 
   private scheduleRush(when: number): void {
-    this.bell(740, when, 0.18, 0.34);
-    this.bell(988, when + 0.13, 0.26, 0.38);
+    this.pierce(1760, when, 0.06, 0.9, 'square');
+    this.pierce(3520, when, 0.03, 0.28, 'square');
+    this.tick(when, 0.014, 0.5);
+    this.pierce(2340, when + 0.08, 0.08, 0.98, 'sawtooth');
+    this.pierce(4680, when + 0.08, 0.04, 0.24, 'square');
   }
 
   private scheduleBreak(when: number): void {
-    this.bell(392, when, 0.34, 0.3);
+    this.pierce(494, when, 0.1, 0.88, 'square');
+    this.pierce(740, when, 0.055, 0.4, 'square');
   }
 
   private scheduleComplete(when: number): void {
-    this.bell(523.25, when, 0.18, 0.28);
-    this.bell(659.25, when + 0.14, 0.18, 0.28);
-    this.bell(783.99, when + 0.28, 0.26, 0.32);
+    this.pierce(988, when, 0.07, 0.8, 'square');
+    this.pierce(1480, when + 0.08, 0.07, 0.86, 'square');
+    this.pierce(1976, when + 0.16, 0.11, 0.95, 'square');
+    this.pierce(2960, when + 0.16, 0.06, 0.3, 'sawtooth');
   }
 }
 
